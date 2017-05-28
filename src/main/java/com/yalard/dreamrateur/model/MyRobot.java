@@ -1,51 +1,83 @@
 package com.yalard.dreamrateur.model;
 
+import com.yalard.dreamrateur.dao.MazeState;
+import com.yalard.dreamrateur.constants.CellType;
 import com.yalard.dreamrateur.com.yalard.dreamrateur.services.CommunicationService;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.util.List;
-import java.util.stream.Collector;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Created by yohanalard on 24/03/2017.
+ * My robot navigate on the maze
+ * he only know information about current position (and neighbour position)
+ * he store his local path
  */
 public class MyRobot {
-    private static Logger logger = LogManager.getLogger(MyRobot.class);
-    private Map map;
-    private List <String> lines;
-    private CommunicationService service = new CommunicationService();
+    private List<CoordinateInfo> path = new ArrayList<>();
+    private CoordinateInfo current = null;
 
-    //pop randomly on the map
-    private void pop(){
-        //filter Wall
-        //convert input in 2 way dimentional map
+    /** start walking on the maze */
+    public void start() {
+        //get current position information
+        current = MazeState.INSTANCE.getCurrentPosition();
+        //start the path way with the initial position
+        path.add(current);
+        nextMove();
     }
 
-    public int countAvailablePopPosition(){
-        return lines.stream().mapToInt(l -> l.split(" ").length).sum();
-    }
-    //scan left right upper & down position
-    public void sonar(){
 
+    /**
+     * compute next move
+     * simple stagegy : go up right down left order.
+     * if no move is allowed, simply go back to previous step and apply stategy again.
+     */
+    private void nextMove() {
+        boolean end = Boolean.FALSE;
+        if (current.getUpType().getCellType() == CellType.SPACE) {
+            current = MazeState.INSTANCE.moveUp(true);
+        } else if (current.getRightType().getCellType() == CellType.SPACE) {
+            current = MazeState.INSTANCE.moveRight(true);
+        } else if (current.getDownType().getCellType() == CellType.SPACE) {
+            current = MazeState.INSTANCE.moveDown(true);
+        } else if (current.getLeftType().getCellType() == CellType.SPACE) {
+            current = MazeState.INSTANCE.moveLeft(true);
+        } else {
+            //Dead way
+            if (getAvailableFreeSpaceList().isEmpty()) {
+                //job done
+                end = Boolean.TRUE;
+            } else {
+                // walk back on our step
+                //TODO could compute the best move here // get closes point in getAvailableFreeSpaceList
+                switch (current.getDirection()) {
+                    case UP:
+                        current = MazeState.INSTANCE.moveDown(false);
+                        break;
+                    case DOWN:
+                        current = MazeState.INSTANCE.moveUp(false);
+                        break;
+                    case LEFT:
+                        current = MazeState.INSTANCE.moveRight(false);
+                        break;
+                    case RIGHT:
+                        current = MazeState.INSTANCE.moveLeft(false);
+                        break;
+                }
+            }
+        }
+        current.setCellType(CellType.VISITED);
+        path.add(current);
+        if (!end) nextMove();
     }
-    //stop the process
-    public void stop(){
 
+    /**
+     * return a sublist path where move is still possible.
+     * @return sublist path
+     */
+    private List<CoordinateInfo> getAvailableFreeSpaceList() {
+        return path.stream().filter(coordinateInfo -> coordinateInfo.hasFreeSpace()).collect(Collectors.toList());
     }
 
-    public void wakeup(){
-        service.greetings();
-        lines= service.readLines();
-        service.displayLines(lines);
-    }
-
-    public List<String> getLines() {
-        return lines;
-    }
-
-    public void setLines(List<String> lines) {
-        this.lines = lines;
-    }
 }

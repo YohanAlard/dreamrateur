@@ -1,7 +1,7 @@
-package com.yalard.dreamrateur.com.yalard.dreamrateur;
+package com.yalard.dreamrateur.exception;
 
 /**
- * Created by yohanalard on 24/03/2017.
+ * Generic Tech Exception
  */
 public class TechException extends Exception {
     public TechException(String message) {
